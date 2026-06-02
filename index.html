@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Locked Language Lab</title>
+<style>
+:root{--red:#aa001a;--cream:#f2edec;--black:#000;--white:#fff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--cream);font-family:"Playfair Display",Georgia,serif;color:var(--black)}
+#app{max-width:1060px;margin:0 auto;padding:22px}
+.card{background:#fff;border-radius:28px;padding:24px;margin:18px 0;box-shadow:0 12px 30px rgba(0,0,0,.1)}
+h1{font-size:clamp(42px,7vw,78px);color:var(--red);text-align:center;margin:0 0 12px;line-height:1.05;font-family:"Lemon Tuesday","Playfair Display",Georgia,serif}
+h2{color:var(--red);font-size:28px;margin:0 0 12px}
+h3{font-size:21px;line-height:1.45}
+p,li{font-size:18px;line-height:1.55}
+.btn{border:0;border-radius:999px;padding:13px 20px;margin:6px;font-family:inherit;font-size:17px;background:#000;color:#fff;cursor:pointer;transition:.2s}
+.btn.primary{background:var(--red)}
+.btn:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(0,0,0,.16)}
+.progress{position:sticky;top:8px;z-index:20}
+.bar{height:14px;background:var(--cream);border-radius:99px;overflow:hidden;margin:10px 0}
+.fill{height:100%;width:0;background:var(--red);transition:.3s}
+.gates{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:12px}
+.gate{padding:9px;border-radius:16px;background:var(--cream);text-align:center;font-size:14px}
+.gate.done{background:var(--red);color:#fff}
+.gate.current{box-shadow:inset 0 0 0 2px var(--red)}
+.question{border-top:1px solid var(--cream);padding-top:20px;margin-top:20px}
+.options{display:grid;gap:10px}
+.option{border:1.5px solid var(--cream);border-radius:18px;padding:14px 16px;background:#fff;font-family:inherit;font-size:17px;text-align:left;cursor:pointer;transition:.2s}
+.option:hover{border-color:var(--red)}
+.option.correct{border-color:var(--red);box-shadow:inset 0 0 0 2px var(--red)}
+.option.incorrect{opacity:.65;text-decoration:line-through}
+.feedback{display:none;background:var(--cream);border-radius:18px;padding:14px;margin-top:12px;line-height:1.5}
+.hidden{display:none}
+textarea{width:100%;min-height:88px;border:1.5px solid var(--cream);border-radius:18px;padding:14px;font-family:inherit;font-size:17px;margin:8px 0 16px}
+.hero{width:100%;max-width:600px;margin:16px auto;display:block;border-radius:28px;box-shadow:0 10px 30px rgba(0,0,0,.14)}
+.badge{display:inline-block;background:var(--cream);border-radius:999px;padding:8px 14px;margin:4px;font-size:15px}
+@media(max-width:700px){.gates{grid-template-columns:repeat(2,1fr)}#app{padding:12px}.card{padding:18px}}
+@media print{.btn,.progress{display:none!important}body{background:white}.card{box-shadow:none}}
+</style>
+</head>
+<body>
+<div id="app">
+
+<div class="card" id="start">
+<h1>Locked Language Lab</h1>
+<p style="text-align:center"><strong>Escape Challenge for B2+/C1 students</strong></p>
+<p style="text-align:center">You are locked inside the digital Language Lab. To escape before the final bell, you must unlock ten gates. Each gate contains ten randomly selected questions. You need <strong>10/10</strong> to continue. One mistake resets the whole gate.</p>
+<svg class="hero" viewBox="0 0 900 420" xmlns="http://www.w3.org/2000/svg">
+<rect width="900" height="420" rx="34" fill="#f2edec"/>
+<rect x="90" y="70" width="720" height="270" rx="30" fill="#fff"/>
+<rect x="150" y="125" width="600" height="80" rx="18" fill="#aa001a"/>
+<text x="450" y="174" text-anchor="middle" font-family="Georgia" font-size="34" fill="#fff">LOCKED LANGUAGE LAB</text>
+<circle cx="230" cy="270" r="36" fill="#000"/>
+<circle cx="340" cy="270" r="36" fill="#aa001a"/>
+<circle cx="450" cy="270" r="36" fill="#000"/>
+<circle cx="560" cy="270" r="36" fill="#aa001a"/>
+<circle cx="670" cy="270" r="36" fill="#000"/>
+<text x="450" y="370" text-anchor="middle" font-family="Georgia" font-size="28" fill="#000">10 gates. 10/10 to escape.</text>
+</svg>
+<div style="text-align:center"><button class="btn primary" id="startBtn">Start the Escape Challenge</button></div>
+</div>
+
+<div class="card progress hidden" id="progress">
+<strong>Escape progress:</strong> <span id="progressText">0%</span>
+<div class="bar"><div class="fill" id="fill"></div></div>
+<div class="gates" id="gateMap"></div>
+</div>
+
+<div id="quiz"></div>
+
+<div class="card hidden" id="reflection">
+<h2>Final Reflection</h2>
+<label>Which gate was the most difficult?</label><textarea id="r1"></textarea>
+<label>Which expressions do you want to revise?</label><textarea id="r2"></textarea>
+<label>What helped you escape the Language Lab?</label><textarea id="r3"></textarea>
+<button class="btn primary" id="pdfBtn">Export / Print PDF</button>
+<button class="btn" id="shareBtn">Share</button>
+<button class="btn" id="resetBtn">Reset</button>
+</div>
+
+</div>
+
+<script>
+(function(){
+const KEY="locked_language_lab_final_v3";
+
+const gates=[
+{title:"Gate 1: Adverbs with Two Forms",mission:"Choose the adverb or adjective that fits the meaning.",pool:[
+["The researchers worked ___ throughout the weekend to solve the software failure.","hard",["highly","closely","hard","hardly"],"Hard means with great effort. Hardly means almost not."],
+["I can ___ remember anything from the lecture because I was feeling ill.","hardly",["hard","highly","closely","hardly"],"Hardly means almost not."],
+["The two companies worked very ___ during the merger process.","closely",["closely","close","lately","highly"],"Closely means in close cooperation or with great attention."],
+["The station is surprisingly ___ to the university campus.","close",["closely","highly","close","lately"],"Close refers to physical distance."],
+["The professor is ___ respected in academic circles.","highly",["high","highly","close","lately"],"Highly means very much."],
+["The eagle was flying incredibly ___ above the valley.","high",["highly","high","hardly","closely"],"High describes physical position."],
+["Have you spoken to your former classmates ___?","lately",["late","highly","lately","hard"],"Lately means recently."],
+["We arrived ___ and missed the opening speech.","late",["lately","closely","late","highly"],"Late refers to time."],
+["I have ___ finished reading the article.","just",["just","justly","highly","closely"],"Just means a short time ago."],
+["The judge was known for treating everyone ___.","justly",["just","closely","justly","lately"],"Justly means fairly."],
+["The scientist's work is ___ regarded by experts around the world.","highly",["highly","high","hard","lately"],"Highly regarded is a common collocation."],
+["The police monitored the suspect very ___.","closely",["close","closely","high","hard"],"Closely means carefully and attentively."],
+["I was so tired that I could ___ keep my eyes open.","hardly",["closely","highly","hardly","lately"],"Hardly means almost not."],
+["The hotel is ___ enough to the station to walk there.","close",["closely","close","lately","highly"],"Close to indicates distance."],
+["The decision was made ___ and transparently.","justly",["justly","just","hardly","lately"],"Justly means fairly and according to justice."]
+]},
+{title:"Gate 2: Reported Speech Verb Patterns",mission:"Choose the reporting verb that matches the sentence pattern.",pool:[
+["After missing the first half of the meeting, Daniel publicly ___ for arriving late.","apologized",["accused","encouraged","apologized","insisted"],"We apologize for mistakes or inconvenience."],
+["The journalist was ___ of deliberately misleading readers.","accused",["congratulated","accused","persuaded","reminded"],"Accuse somebody of doing something."],
+["The entire department ___ Sarah on winning the award.","congratulated",["warned","denied","congratulated","admitted"],"Congratulate somebody on doing something."],
+["Despite several objections, the manager ___ on checking every detail personally.","insisted",["insisted","accused","reminded","denied"],"Insist on doing something."],
+["The guide ___ visitors about the risk of falling rocks.","warned",["persuaded","admitted","warned","congratulated"],"Warn somebody about something."],
+["My colleague ___ me to submit the report before Friday.","reminded",["apologized","reminded","accused","admitted"],"Remind somebody to do something."],
+["The recruiter finally ___ him to apply for the position.","persuaded",["denied","persuaded","congratulated","apologized"],"Persuade somebody to do something."],
+["During the interview, the candidate ___ copying parts of the assignment.","admitted",["insisted","warned","admitted","persuaded"],"Admit doing something."],
+["She ___ to comment on the rumours.","refused",["promised","admitted","encouraged","refused"],"Refuse to do something."],
+["The CEO ___ to address the issue immediately.","promised",["accused","promised","denied","congratulated"],"Promise to do something."],
+["The witness ___ having seen the suspect before.","denied",["denied","persuaded","warned","reminded"],"Deny doing something."],
+["The coach ___ the team to stay focused.","encouraged",["encouraged","denied","admitted","accused"],"Encourage somebody to do something."],
+["The teacher ___ the students not to leave early.","warned",["congratulated","warned","apologized","promised"],"Warn somebody not to do something."],
+["She ___ him on completing the project ahead of schedule.","congratulated",["reminded","accused","congratulated","denied"],"Congratulate somebody on doing something."],
+["The manager ___ employees to report any technical problems.","encouraged",["encouraged","accused","insisted","admitted"],"Encourage somebody to do something."]
+]},
+{title:"Gate 3: Reported Speech Transformations",mission:"Choose the verb that correctly reports the direct speech.",pool:[
+["'I'm sorry I broke your laptop.' He ___ for breaking her laptop.","apologized",["insisted","apologized","denied","encouraged"],"Apologize for doing something."],
+["'You should buy a new microphone.' She ___ buying a new microphone.","recommended",["admitted","warned","recommended","denied"],"Recommend doing something."],
+["'You mustn't enter this room.' The teacher ___ the students to enter the room.","forbade",["persuaded","encouraged","reminded","forbade"],"Forbid somebody to do something."],
+["'Well done on passing the exam.' She ___ him on passing the exam.","congratulated",["congratulated","denied","accused","warned"],"Congratulate somebody on doing something."],
+["'I ate the last piece of cake.' He ___ to eating the last piece of cake.","confessed",["promised","warned","confessed","encouraged"],"Confess to doing something."],
+["'I'll help you tomorrow.' She ___ to help him.","promised",["denied","promised","accused","admitted"],"Promise to do something."],
+["'Come to the conference with us.' They ___ her to go to the conference.","invited",["warned","accused","invited","denied"],"Invite somebody to do something."],
+["'I won't sign the contract.' He ___ to sign the contract.","refused",["refused","promised","admitted","congratulated"],"Refuse to do something."],
+["'Don't forget to call me.' She ___ him to call her.","reminded",["accused","insisted","reminded","denied"],"Remind somebody to do something."],
+["'You should apply for the scholarship.' The teacher ___ her to apply for the scholarship.","encouraged",["accused","encouraged","denied","apologized"],"Encourage somebody to do something."],
+["'Please don't leave yet.' She ___ him not to leave.","begged",["begged","congratulated","admitted","denied"],"Beg somebody to do something."],
+["'I didn't take the money.' He ___ taking the money.","denied",["promised","denied","encouraged","admitted"],"Deny doing something."],
+["'You should definitely try this course.' The mentor ___ her to try the course.","persuaded",["persuaded","denied","accused","admitted"],"Persuade somebody to do something."],
+["'Don't touch the equipment.' The instructor ___ students not to touch the equipment.","warned",["congratulated","warned","admitted","encouraged"],"Warn somebody not to do something."],
+["'Let's leave early.' She ___ leaving early.","recommended",["recommended","accused","denied","insisted"],"Recommend doing something."]
+]},
+{title:"Gate 4: Social Media Vocabulary",mission:"Choose the best vocabulary item in context.",pool:[
+["Shina's videos help ___ Inuit culture for future generations.","preserve",["deny","preserve","criticize","intimidate"],"Preserve means protect and maintain."],
+["Her videos have attracted thousands of ___ from around the world.","followers",["collections","applicants","followers","critics"],"Followers are people who subscribe to online content."],
+["Some users unfairly ___ her appearance online.","mocked",["mocked","preserved","empowered","admitted"],"To mock means to make fun of someone."],
+["Her work helps ___ awareness of Indigenous traditions.","raise",["preserve","deny","raise","intimidate"],"Raise awareness is a common collocation."],
+["The internet has significantly improved global ___.","connectivity",["criticism","connectivity","denial","intimidation"],"Connectivity refers to the ability to connect people and communities."],
+["Her project aims to ___ interest in traditional throat singing.","revitalize",["criticize","preserve","revitalize","deny"],"Revitalize means bring new life to something."],
+["Many young people feel ___ to learn more about their heritage after watching her videos.","empowered",["criticized","empowered","denied","intimidated"],"Empower means give confidence and strength."],
+["The charity managed to ___ more than $20,000 through social media.","raise",["preserve","criticize","raise","deny"],"Raise money means collect money."],
+["Despite negative comments, she refused to be ___ by online criticism.","intimidated",["empowered","preserved","intimidated","revitalized"],"Intimidated means frightened or discouraged."],
+["The museum launched a digital ___ of historical photographs.","collection",["follower","connectivity","collection","awareness"],"A collection is a group of items gathered together."],
+["The campaign helped ___ cultural traditions that were slowly disappearing.","revitalize",["revitalize","deny","intimidate","criticize"],"Revitalize means restore energy and importance."],
+["Many viewers were inspired by the educational ___ she posted online.","content",["followers","content","criticism","collection"],"Content refers to material published online."],
+["Several public figures publicly ___ her work.","criticized",["criticized","preserved","empowered","revitalized"],"Criticize means express disapproval."],
+["The platform gives creators direct access to a global ___.","audience",["criticism","audience","denial","collection"],"Audience means people who watch or follow content."],
+["The project received international ___ for its innovative approach.","recognition",["recognition","intimidation","denial","criticism"],"Recognition means appreciation and acknowledgement."]
+]},
+{title:"Gate 5: Social Media Grammar & Reporting Verbs",mission:"Choose the reporting verb that works in context.",pool:[
+["In an interview, Shina ___ feeling nervous before publishing her first video.","admitted",["denied","congratulated","admitted","warned"],"Admit doing something."],
+["Thousands of followers ___ her on promoting Inuit culture worldwide.","congratulated",["accused","congratulated","denied","persuaded"],"Congratulate somebody on doing something."],
+["She ___ on delivering the donated supplies personally.","insisted",["insisted","denied","accused","congratulated"],"Insist on doing something."],
+["Some critics ___ her of reinforcing stereotypes.","accused",["reminded","promised","accused","admitted"],"Accuse somebody of doing something."],
+["She ___ to be intimidated by online attacks.","refused",["promised","refused","admitted","persuaded"],"Refuse to do something."],
+["Her supporters ___ her to continue creating educational content.","encouraged",["encouraged","denied","accused","apologized"],"Encourage somebody to do something."],
+["After receiving feedback, she ___ for an error in one of her posts.","apologized",["admitted","congratulated","apologized","denied"],"Apologize for something."],
+["Many community leaders ___ her for keeping cultural traditions alive.","praised",["accused","praised","denied","warned"],"Praise means express admiration."],
+["She ___ to continue supporting cultural education projects.","promised",["denied","insisted","promised","accused"],"Promise to do something."],
+["During the discussion, she ___ saying anything offensive.","denied",["admitted","denied","congratulated","encouraged"],"Deny doing something."],
+["The organisers ___ participants to share their own cultural stories.","encouraged",["encouraged","accused","denied","admitted"],"Encourage somebody to do something."],
+["Several viewers ___ her about the risks of online harassment.","warned",["warned","congratulated","denied","persuaded"],"Warn somebody about something."],
+["The interviewer ___ her to explain the origins of throat singing.","invited",["persuaded","invited","denied","accused"],"Invite somebody to do something."],
+["Many experts ___ her to expand the project internationally.","persuaded",["persuaded","denied","accused","warned"],"Persuade somebody to do something."],
+["She ___ sharing personal experiences to make the message more authentic.","recommended",["recommended","denied","accused","refused"],"Recommend doing something."]
+]},
+{title:"Gate 6: Advanced Social Media Vocabulary",mission:"Choose the strongest vocabulary item in context.",pool:[
+["Social media can ___ traditional cultures by connecting younger generations with their heritage.","revitalize",["intimidate","deny","revitalize","criticize"],"Revitalize means bring new life to something."],
+["The platform significantly increased global ___ between remote communities.","connectivity",["connectivity","criticism","denial","intimidation"],"Connectivity refers to communication and links between people."],
+["The campaign successfully ___ funds for educational programmes.","raised",["denied","raised","intimidated","preserved"],"Raise funds means collect money."],
+["The organisation hopes to ___ endangered languages through digital media.","preserve",["preserve","deny","criticize","intimidate"],"Preserve means protect from disappearing."],
+["Educational content can ___ young people to become more active in their communities.","empower",["empower","deny","criticize","intimidate"],"Empower means give confidence and ability."],
+["Some creators struggle when they are constantly ___ online.","criticized",["empowered","revitalized","criticized","preserved"],"Criticized means judged negatively."],
+["The initiative has attracted a large international ___.","audience",["audience","denial","criticism","intimidation"],"Audience means people who consume content."],
+["Her educational ___ focuses on Indigenous history and traditions.","content",["connectivity","content","intimidation","denial"],"Content refers to published material."],
+["The project received widespread ___ from educational organisations.","recognition",["recognition","intimidation","denial","criticism"],"Recognition means official appreciation."],
+["The programme aims to strengthen cultural ___ among young people.","identity",["identity","denial","criticism","intimidation"],"Cultural identity means a sense of belonging to a culture."],
+["Many communities use technology to document valuable cultural ___.","heritage",["heritage","denial","criticism","intimidation"],"Heritage means traditions and history passed through generations."],
+["The organisation launched a new online ___ of educational resources.","collection",["collection","denial","intimidation","criticism"],"Collection means organised group of materials."],
+["The campaign helped increase public ___ of cultural diversity.","awareness",["awareness","denial","intimidation","criticism"],"Awareness means knowledge and understanding."],
+["Her work demonstrates the positive ___ of social media on education.","impact",["impact","denial","intimidation","criticism"],"Impact means effect or influence."],
+["The project continues to ___ support from international partners.","attract",["attract","deny","intimidate","criticize"],"Attract means draw interest or support."]
+]},
+{title:"Gate 7: Compound Verbs 1",mission:"Choose the compound verb that best completes the sentence.",pool:[
+["The government tried to ___ the seriousness of the environmental disaster.","downplay",["uphold","outweigh","uplift","downplay"],"Downplay means make something appear less important."],
+["Several economists warned that the proposal could ___ investor confidence.","undermine",["undermine","uplift","uphold","oversell"],"Undermine means weaken gradually."],
+["The advantages of the new system clearly ___ the risks.","outweigh",["overthrow","uphold","outweigh","oversell"],"Outweigh means be more important than."],
+["The Supreme Court decided to ___ the original verdict.","uphold",["downplay","overthrow","oversell","uphold"],"Uphold means support or confirm a decision."],
+["The marketing team was accused of trying to ___ the product.","oversell",["oversell","uphold","outweigh","uplift"],"Oversell means exaggerate the value of something."],
+["The rebels attempted to ___ the government.","overthrow",["uplift","outweigh","overthrow","uphold"],"Overthrow means remove from power."],
+["Her speech helped ___ employees during a difficult period.","uplift",["undermine","uplift","overthrow","oversell"],"Uplift means improve morale."],
+["The witness chose to ___ key information from investigators.","withhold",["uphold","uplift","outweigh","withhold"],"Withhold means deliberately not provide information."],
+["The small family business managed to ___ several large competitors.","outlive",["outlive","overthrow","oversell","uplift"],"Outlive means survive longer than."],
+["After years of progress, the country began to ___ economically.","backslide",["backslide","uphold","uplift","outweigh"],"Backslide means return to a worse condition."],
+["Experts fear that misinformation could ___ public trust in science.","undermine",["undermine","uplift","uphold","oversell"],"Undermine means weaken."],
+["The charity's achievements far ___ its early failures.","outweigh",["uphold","outweigh","overthrow","oversell"],"Outweigh means be more significant."],
+["The company tried to ___ negative reviews in the media.","downplay",["downplay","uplift","uphold","outlive"],"Downplay means minimise importance."],
+["The new evidence helped ___ the defendant's claims.","uphold",["uphold","overthrow","outweigh","oversell"],"Uphold means support as valid."],
+["The organisation hopes its work will ___ disadvantaged communities.","uplift",["undermine","uplift","overthrow","oversell"],"Uplift means improve people's situation."]
+]},
+{title:"Gate 8: Compound Verbs 2",mission:"Choose the correct compound verb.",pool:[
+["The agency decided to ___ the country's credit rating.","downgrade",["outclass","withstand","downgrade","outlast"],"Downgrade means lower status or ranking."],
+["Many patients must ___ lengthy medical treatment.","undergo",["undergo","downgrade","outclass","backfire"],"Undergo means experience something difficult."],
+["The new smartphone easily ___ older models.","outclasses",["withstands","offloads","overhangs","outclasses"],"Outclass means be clearly superior."],
+["The bridge managed to ___ decades of extreme weather.","withstand",["downgrade","withstand","outclass","underestimate"],"Withstand means resist successfully."],
+["Many students ___ the amount of preparation required.","underestimate",["withstand","undergo","underestimate","outlast"],"Underestimate means think something is smaller or easier than it is."],
+["The company plans to ___ administrative work to external contractors.","offload",["offload","withstand","outclass","overhang"],"Offload means transfer work elsewhere."],
+["Dark clouds began to ___ the coastline.","overhang",["downgrade","overhang","outlast","withstand"],"Overhang means hang over something."],
+["The strategy completely ___ and damaged the company's reputation.","backfired",["underwent","outlasted","withstood","backfired"],"Backfire means have the opposite effect."],
+["This battery can ___ most competing products.","outlast",["offload","outlast","downgrade","overhang"],"Outlast means last longer than."],
+["The headteacher publicly ___ a student for repeated misconduct.","upbraided",["upgraded","outlasted","upheld","upbraided"],"Upbraid means criticise severely."],
+["The team managed to ___ intense pressure during the final match.","withstand",["downgrade","withstand","outclass","offload"],"Withstand means resist."],
+["The report warned against ___ the long-term consequences.","underestimating",["underestimating","outlasting","overhanging","withstanding"],"Underestimate means fail to appreciate fully."],
+["The company had to ___ several non-essential tasks.","offload",["offload","downgrade","outclass","outlast"],"Offload means transfer responsibility."],
+["The luxury brand continues to ___ most competitors.","outclass",["withstand","outclass","downgrade","backfire"],"Outclass means outperform significantly."],
+["Several policies eventually ___ and created new difficulties.","backfired",["withstood","underwent","backfired","downgraded"],"Backfire means produce the opposite result."]
+]},
+{title:"Gate 9: Advanced Adverb Collocations",mission:"Choose the adverb that forms the strongest natural collocation.",pool:[
+["I ___ remember the first time I heard that speech.","distinctly",["richly","sorely","distinctly","actively"],"Distinctly remember is a fixed collocation."],
+["The historic building was ___ damaged by the earthquake.","badly",["badly","richly","categorically","distinctly"],"Badly damaged is a common collocation."],
+["The minister ___ denied all allegations.","categorically",["deeply","categorically","sorely","actively"],"Categorically deny means deny completely."],
+["Human rights groups ___ condemned the attack.","strongly",["closely","actively","strongly","richly"],"Strongly condemn is a fixed expression."],
+["Parents should ___ encourage children to read.","actively",["actively","sorely","deeply","distinctly"],"Actively encourage means encourage deliberately."],
+["She ___ regretted not accepting the opportunity.","deeply",["deeply","closely","categorically","richly"],"Deeply regret is a common collocation."],
+["The team ___ deserved their victory.","richly",["actively","richly","closely","distinctly"],"Richly deserve means deserve completely."],
+["I was ___ tempted to accept the offer.","sorely",["categorically","strongly","richly","sorely"],"Sorely tempted means very tempted."],
+["The twins ___ resemble each other.","closely",["closely","deeply","richly","sorely"],"Closely resemble is fixed."],
+["She ___ refused to answer the question.","flatly",["richly","flatly","actively","closely"],"Flatly refuse means refuse directly."],
+["The proposal was ___ rejected by the committee.","unanimously",["unanimously","richly","sorely","distinctly"],"Unanimously rejected means everyone rejected it."],
+["The outcome was ___ obvious from the beginning.","patently",["richly","sorely","patently","actively"],"Patently obvious means obviously true."],
+["The injury was ___ painful.","excruciatingly",["excruciatingly","categorically","closely","actively"],"Excruciatingly painful means extremely painful."],
+["The software is now ___ available across Europe.","widely",["bitterly","widely","richly","sorely"],"Widely available means available in many places."],
+["The athlete was ___ disappointed by the result.","bitterly",["bitterly","categorically","actively","closely"],"Bitterly disappointed means very disappointed."]
+]},
+{title:"Gate 10: Master Gate",mission:"Final mixed challenge. Everything is possible here.",pool:[
+["The journalist was ___ of misleading the public.","accused",["congratulated","accused","persuaded","reminded"],"Accuse somebody of doing something."],
+["The company tried to ___ the seriousness of the incident.","downplay",["uphold","uplift","outweigh","downplay"],"Downplay means minimise importance."],
+["I could ___ keep my eyes open after the flight.","hardly",["highly","closely","hardly","lately"],"Hardly means almost not."],
+["The charity hopes to ___ awareness of mental health issues.","raise",["raise","deny","preserve","intimidate"],"Raise awareness is a common collocation."],
+["The strategy completely ___ and created even bigger problems.","backfired",["downgraded","withstood","underwent","backfired"],"Backfire means produce the opposite result."],
+["The community is working hard to ___ local traditions.","preserve",["criticize","deny","preserve","intimidate"],"Preserve means protect."],
+["The internet has dramatically improved global ___.","connectivity",["connectivity","denial","criticism","intimidation"],"Connectivity means connection between people or places."],
+["The professor is ___ respected by colleagues worldwide.","highly",["high","hard","lately","highly"],"Highly means very much."],
+["The witness decided to ___ important information.","withhold",["withhold","uphold","uplift","outweigh"],"Withhold means refuse to give."],
+["The manager ___ to discuss the issue further.","refused",["admitted","congratulated","refused","accused"],"Refuse to do something."],
+["The coach ___ players to stay focused.","encouraged",["denied","encouraged","accused","apologized"],"Encourage somebody to do something."],
+["The organisation managed to ___ thousands of pounds for charity.","raise",["preserve","criticize","deny","raise"],"Raise money means collect money."],
+["Several experts warned that the policy could ___ public trust.","undermine",["uplift","oversell","uphold","undermine"],"Undermine means weaken."],
+["The project received international ___ for its innovative approach.","recognition",["criticism","intimidation","recognition","denial"],"Recognition means acknowledgement."],
+["The minister ___ denied the allegations.","categorically",["categorically","sorely","closely","richly"],"Categorically deny means deny completely."],
+["The luxury brand continues to ___ its competitors.","outclass",["outclass","downgrade","offload","overhang"],"Outclass means be much better than."],
+["Many viewers felt ___ to learn more about their heritage.","empowered",["denied","criticized","revitalized","empowered"],"Empowered means given confidence."],
+["The battery can easily ___ rival products.","outlast",["downgrade","outlast","offload","withstand"],"Outlast means last longer than."],
+["The team ___ deserved to win the championship.","richly",["richly","categorically","actively","sorely"],"Richly deserve is a strong collocation."],
+["The guide ___ visitors about the dangers of the route.","warned",["persuaded","congratulated","admitted","warned"],"Warn somebody about something."]
+]}
+];
+
+let state=JSON.parse(localStorage.getItem(KEY)||"{}");
+if(!state.gate&&state.gate!==0)state={gate:0,completed:Array(gates.length).fill(false)};
+let currentQ=0,gateSet=[],wrong=false;
+
+const start=document.getElementById("start"),progress=document.getElementById("progress"),quiz=document.getElementById("quiz"),reflection=document.getElementById("reflection"),gateMap=document.getElementById("gateMap");
+
+function save(){localStorage.setItem(KEY,JSON.stringify(state));updateProgress()}
+function shuffle(a){return a.map(x=>[Math.random(),x]).sort((x,y)=>x[0]-y[0]).map(x=>x[1])}
+function pick(arr,n){return shuffle(arr).slice(0,n)}
+function updateProgress(){
+gateMap.innerHTML="";
+let done=state.completed.filter(Boolean).length;
+document.getElementById("progressText").textContent=Math.round(done/gates.length*100)+"%";
+document.getElementById("fill").style.width=Math.round(done/gates.length*100)+"%";
+gates.forEach((g,i)=>{let d=document.createElement("div");d.className="gate"+(state.completed[i]?" done":"")+(i===state.gate&&!state.completed.every(Boolean)?" current":"");d.textContent="Gate "+(i+1);gateMap.appendChild(d)});
+}
+function startGame(){start.classList.add("hidden");progress.classList.remove("hidden");updateProgress();renderGate()}
+function renderGate(){wrong=false;currentQ=0;gateSet=pick(gates[state.gate].pool,10);renderQuestion()}
+function renderQuestion(){
+let g=gates[state.gate],q=gateSet[currentQ];
+quiz.innerHTML=`<div class="card"><h2>${g.title}</h2><p><strong>${g.mission}</strong></p><p>Question ${currentQ+1}/10. You need 10/10 to unlock this gate.</p><div class="question"><h3>${q[0]}</h3><div class="options"></div><div class="feedback"></div></div></div>`;
+let optBox=quiz.querySelector(".options");
+shuffle(q[2]).forEach(o=>{let b=document.createElement("button");b.className="option";b.textContent=o;b.addEventListener("click",()=>answer(o));optBox.appendChild(b)});
+}
+function answer(selected){
+let q=gateSet[currentQ],correct=selected===q[1];if(!correct)wrong=true;
+quiz.querySelectorAll(".option").forEach(b=>{b.disabled=true;if(b.textContent===q[1])b.classList.add("correct");if(b.textContent===selected&&!correct)b.classList.add("incorrect")});
+let fb=quiz.querySelector(".feedback");fb.style.display="block";
+fb.innerHTML=(correct?`<strong>Correct.</strong> `:`<strong>Incorrect.</strong> The correct answer is <strong>${q[1]}</strong>. `)+q[3];
+let btn=document.createElement("button");btn.className="btn primary";btn.type="button";btn.textContent=currentQ<9?"Continue":"Finish Gate";
+btn.addEventListener("click",()=>{currentQ++;currentQ<10?renderQuestion():finishGate()});
+fb.appendChild(document.createElement("br"));fb.appendChild(btn);
+}
+function finishGate(){
+if(wrong){
+quiz.innerHTML=`<div class="card"><h2>Access denied</h2><p>You made at least one mistake. This gate has reset. Try again with a new random set of questions and newly shuffled answers.</p><button class="btn primary" id="retry">Retry Gate</button></div>`;
+document.getElementById("retry").addEventListener("click",renderGate);
+}else{
+state.completed[state.gate]=true;save();
+quiz.innerHTML=`<div class="card"><h2>Gate ${state.gate+1} unlocked</h2><p>Perfect score: 10/10. The next part of the Language Lab is now open.</p><button class="btn primary" id="next">${state.gate===gates.length-1?"Escape the Lab":"Next Gate"}</button></div>`;
+document.getElementById("next").addEventListener("click",()=>{if(state.gate<gates.length-1){state.gate++;save();renderGate()}else finalScreen()});
+}
+}
+function finalScreen(){
+state.completed=Array(gates.length).fill(true);save();
+quiz.innerHTML=`<div class="card"><h1>You Escaped!</h1><p style="text-align:center">Congratulations. You unlocked all ten gates and escaped the Locked Language Lab before the final bell.</p><div style="text-align:center"><span class="badge">Adverbs mastered</span><span class="badge">Reported speech unlocked</span><span class="badge">Social media vocabulary cleared</span><span class="badge">Compound verbs decoded</span><span class="badge">Collocations secured</span></div></div>`;
+reflection.classList.remove("hidden");
+}
+document.getElementById("startBtn").addEventListener("click",startGame);
+document.getElementById("resetBtn").addEventListener("click",()=>{if(confirm("Reset all progress?")){localStorage.removeItem(KEY);location.reload()}});
+document.getElementById("pdfBtn").addEventListener("click",()=>window.print());
+document.getElementById("shareBtn").addEventListener("click",async()=>{if(navigator.share)await navigator.share({title:"Locked Language Lab",url:location.href});else{await navigator.clipboard.writeText(location.href);alert("Link copied.")}});
+if(state.completed.some(Boolean)||state.gate>0){start.classList.add("hidden");progress.classList.remove("hidden");updateProgress();state.completed.every(Boolean)?finalScreen():renderGate()}
+})();
+</script>
+</body>
+</html>
